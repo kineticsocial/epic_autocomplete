@@ -1,0 +1,50 @@
+EpicAutocomplete
+================
+
+This is a plugin that makes using the jQuery autocomplete javascript easy to use with rails.  Storing the id of the object being used for into a hidden field for easy retrieval.
+
+Options
+=======
+:clear_button, show the clear button defaults to false
+:callback, javascript function to call when something is selected
+:clear_callback, javascript to call when input is cleared
+:url, the url to call, defaults to /object.class/autocomplete.js
+:display, what to view in field on an edit
+
+
+Requirements
+============
+After the plugin has been installed you will need to add your own routes.
+
+ROUTES: addtion of a route to the new autocomplete method in the controller of the model you are autocompleting on.
+
+You can edit the styles in :
+app/views/stylesheets/jquery.autocomplete.css
+
+It comes with the jQuery autocomplete library already installed.
+public/javascripts/jquery.autocomplete.js
+
+
+Example
+=======
+
+/config/routes.rb
+map.resources :offers, :collection => { :autocomplete => :get }
+
+/app/views/layouts/application.html.erb
+<%= javascript_include_tag 'jquery.autocomplete' %>
+
+/app/models/offer.rb
+named_scope :autocomplete, lambda {|term| {:limit => AUTOCOMPLETE_LIMIT, :conditions => ["id LIKE (?) OR title LIKE (?)", "#{term}%", "%#{term}%"]}}
+
+/app/controllers/offers_controller.rb
+def autocomplete
+ @offers = Offer.autocomplete(params[:q])
+end
+
+/app/views/offer/quicksearch.html.erb
+<%= f.autocomplete(:offer_id, {:autocomplete_class => 'Offer', :display => :title, :callback => 'update_offer_information(data[0])', :clear_callback => 'clear_offer_information()'}) %>
+
+
+
+Copyright (c) 2009 [epic advertising], released under the MIT license
