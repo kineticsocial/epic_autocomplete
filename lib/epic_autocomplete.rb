@@ -44,7 +44,7 @@ module EpicAutocomplete
 
             $("##{options[:id]}").autocomplete("#{url}",
             {
-              delay:300,
+              delay:200,
               minChars:2,
               selectFirst:1,
               formatItem: function(item) { return "(" + item[0] + ") " + item[1]; },
