@@ -1,6 +1,7 @@
 module EpicAutocomplete
   
   module FormBuilderMethods
+
     # Options
     # :clear_button, show the clear button defaults to false
     # :callback, javascript function to call when something is selected
@@ -14,6 +15,7 @@ module EpicAutocomplete
       display            = options.delete(:display) || :id
       options[:class]    = options[:class] || 'autocomplete'
       clear_button       = options.delete(:clear_button) || false
+      clear_button_text  = options.delete(:clear_button_text) || "Clr"
 
       # Create an id for all autocomplete objects
       options[:id] = "#{@object_name}_#{method}_autocomplete"
@@ -27,44 +29,47 @@ module EpicAutocomplete
         value_object    = "#{autocomplete_class}".constantize.find(@object.send(method))
         options[:value] = "(#{value_object.id}) #{value_object.send(display)}"
         selected_id     = value_object.id
-      rescue ActiveRecord::RecordNotFound, ActiveResource::ResourceNotFound => e
+      rescue ActiveRecord::RecordNotFound, ActiveResource::ResourceNotFound
         value_object    = nil
         options[:value] = nil
         selected_id     = ''
       end
+      
+      # Doing the autocompleter this way ensures that the code will still work with javascript disabled
+      new_fields = @template.text_field_tag("#{autocomplete_class}_#{method}", selected_id, options)
+      if clear_button
+        new_fields += %{<input type="button" value="#{clear_button_text}" id="#{options[:id]}_clear" class="autocomplete_clear" #{'disabled=true' unless options[:disabled].blank?} />}
+      end
+      new_fields += @template.hidden_field(@object_name, method, :id => "#{options[:id]}_hidden", :value => selected_id)
 
-      @template.content_for(:head) {
+      @template.content_for(:head) do
         @template.javascript_tag do
           %{$(function(){
-
-            $("##{options[:id]}_clear").click(function () {
-              $("##{options[:id]}_hidden").val('');
-              $("##{options[:id]}").val('');
-            });
-
-            $("##{options[:id]}").autocomplete("#{url}",
+            $("##{options[:id]}").before('#{@template.escape_javascript(new_fields)}').remove();
+            $("##{options[:id]}").addClass('autocomplete')
+            .autocomplete("#{url}",
             {
-              delay:200,
+              delay:250,
               minChars:2,
               selectFirst:1,
               formatItem: function(item) { return "(" + item[0] + ") " + item[1]; },
               formatResult: function(item) { return "(" + item[0] + ") " + item[1];},
               autoFill:true,
               mustMatch:true
-              
             }
-            ).result(function (evt, data, formatted) { $("##{options[:id]}_hidden").val(data[0]); #{callback}}
-            ).on_change(function(evt, value) { if(value == ''){$("##{options[:id]}_hidden").val(''); #{clear_callback}};});
-         });}
-        end
-      }
+            )
+            .result(function (evt, data, formatted) { $("##{options[:id]}_hidden").val(data[0]); #{callback}})
+            .on_change(function(evt, value) { if(value == ''){$("##{options[:id]}_hidden").val(''); #{clear_callback}};});
 
-      output = @template.text_field("", "#{autocomplete_class}_#{method}", options)
-      output << @template.hidden_field(@object_name, method, :id => "#{options[:id]}_hidden", :value => selected_id)
-      if clear_button
-        output << %{<input type="button" value="Clr" id="#{options[:id]}_clear" class="autocomplete_clear" #{'disabled=true' unless options[:disabled].blank?}>}
+            $("##{options[:id]}_clear").click(function () {
+              $("##{options[:id]}_hidden").val('');
+              $("##{options[:id]}").val('');
+            });
+          });}
+        end
       end
-      output
+
+      @template.text_field(@object_name, method, :id => "#{options[:id]}", :value => selected_id)
     end
   end 
 end
